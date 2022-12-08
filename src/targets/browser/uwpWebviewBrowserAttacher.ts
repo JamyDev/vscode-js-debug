@@ -51,37 +51,7 @@ export class UWPWebviewBrowserAttacher extends BrowserAttacher<IEdgeParamsWithWe
     context: ILaunchContext,
     params: IEdgeParamsWithWebviewPipe,
   ): Promise<Connection> {
-    const { getAppContainerProcessTokens } = await import('@vscode/win32-app-container-tokens');
-    const pipeNames = getAppContainerProcessTokens(params.useWebView.pipeName);
-    if (!pipeNames) {
-      throw new ProtocolError(uwpPipeNotAvailable());
-    }
-
-    const pipes = pipeNames.map(name => connect(name));
     let succeeded: Socket | undefined;
-    try {
-      succeeded = await timeoutPromise(
-        some(
-          pipes.map(
-            pipe =>
-              new Promise<Socket | undefined>(resolve =>
-                pipe.on('error', () => resolve(undefined)).on('connect', () => resolve(pipe)),
-              ),
-          ),
-        ),
-        context.cancellationToken,
-      );
-    } finally {
-      for (const pipe of pipes) {
-        if (pipe !== succeeded) {
-          pipe.destroy();
-        }
-      }
-    }
-
-    if (!succeeded) {
-      throw new ProtocolError(noUwpPipeFound());
-    }
 
     const transport = new RawPipeTransport(this.logger, succeeded);
     return new Connection(transport, this.logger, context.telemetryReporter);
